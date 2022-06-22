@@ -1,7 +1,7 @@
 {
-    "name": "friendsofdoctrine/dbal-clickhouse",
+    "name": "junus/dbal-clickhouse",
     "type": "library",
-    "description": "Doctrine DBAL driver for ClickHouse",
+    "description": "Doctrine DBAL driver for ClickHouse. Fork from http://github.com/friendsofdoctrine/dbal-clickhouse",
     "keywords": [
         "doctrine",
         "dbal",
@@ -22,13 +22,16 @@
         {
             "name": "Sanikovich Aleksey",
             "email": "asanikovich@gmail.com"
+        },
+        {
+            "name": "Junus"
         }
     ],
     "require": {
         "php": "^7.1 || ^8.0",
         "ext-pdo": "*",
         "ext-pcre": "*",
-        "doctrine/dbal": "^2.7",
+        "doctrine/dbal": "^3.3",
         "smi2/phpclickhouse": "^1.0"
     },
     "require-dev": {
