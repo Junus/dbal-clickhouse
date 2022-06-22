@@ -8,26 +8,27 @@ declare(strict_types=1);
  *
  * (c) FriendsOfDoctrine <https://github.com/FriendsOfDoctrine/>.
  *
- * For the full copyright and license information, please view the LICENSE
+ * For the full copyright and license inflormation, please view the LICENSE
  * file that was distributed with this source code.
  */
 
 namespace FOD\DBALClickHouse;
 
+use ClickHouseDB\Client;
 use ClickHouseDB\Client as Smi2CHClient;
 use ClickHouseDB\Exception\TransportException;
 use Doctrine\DBAL\Driver\Connection;
-use Doctrine\DBAL\Driver\PingableConnection;
+use Doctrine\DBAL\Driver\Result;
 use Doctrine\DBAL\Driver\ServerInfoAwareConnection;
+use Doctrine\DBAL\Driver\Statement;
 use Doctrine\DBAL\ParameterType;
 use Doctrine\DBAL\Platforms\AbstractPlatform;
 use function array_merge;
-use function func_get_args;
 
 /**
  * ClickHouse implementation for the Connection interface.
  */
-class ClickHouseConnection implements Connection, PingableConnection, ServerInfoAwareConnection
+class ClickHouseConnection implements Connection, ServerInfoAwareConnection
 {
     /** @var Smi2CHClient */
     protected $smi2CHClient;
@@ -35,6 +36,14 @@ class ClickHouseConnection implements Connection, PingableConnection, ServerInfo
     /** @var AbstractPlatform */
     protected $platform;
 
+    /**
+     * Connection constructor
+     *
+     * @param array $params
+     * @param string $username
+     * @param string $password
+     * @param AbstractPlatform $platform
+     */
     public function __construct(
         array $params,
         string $username,
@@ -55,44 +64,41 @@ class ClickHouseConnection implements Connection, PingableConnection, ServerInfo
     /**
      * {@inheritDoc}
      */
-    public function prepare($prepareString) : ClickHouseStatement
+    public function prepare(string $sql): Statement
     {
-        return new ClickHouseStatement($this->smi2CHClient, $prepareString, $this->platform);
+        return new ClickHouseStatement($this->smi2CHClient, $sql, $this->platform);
     }
 
     /**
      * {@inheritDoc}
      */
-    public function query() : ClickHouseStatement
+    public function query(string $sql): Result
     {
-        $args = func_get_args();
-        $stmt = $this->prepare($args[0]);
-        $stmt->execute();
+        $stmt = $this->prepare($sql);
 
-        return $stmt;
+        return $stmt->execute();
     }
 
     /**
      * {@inheritDoc}
      */
-    public function quote($input, $type = ParameterType::STRING)
+    public function quote($value, $type = ParameterType::STRING)
     {
         if ($type === ParameterType::INTEGER) {
-            return $input;
+            return $value;
         }
 
-        return $this->platform->quoteStringLiteral($input);
+        return $this->platform->quoteStringLiteral($value);
     }
 
     /**
      * {@inheritDoc}
      */
-    public function exec($statement) : int
+    public function exec(string $sql): int
     {
-        $stmt = $this->prepare($statement);
-        $stmt->execute();
+        $stmt = $this->prepare($sql);
 
-        return $stmt->rowCount();
+        return $stmt->execute() ? 1 : 0;
     }
 
     /**
@@ -100,53 +106,37 @@ class ClickHouseConnection implements Connection, PingableConnection, ServerInfo
      */
     public function lastInsertId($name = null)
     {
-        throw ClickHouseException::notSupported('Unable to get last insert id in ClickHouse');
+        throw new \LogicException('Unable to get last insert id in ClickHouse');
     }
 
     /**
      * {@inheritDoc}
      */
-    public function beginTransaction() : bool
+    public function beginTransaction()
     {
-        throw ClickHouseException::notSupported('Transactions are not allowed in ClickHouse');
+        throw new \LogicException('Transactions are not allowed in ClickHouse');
     }
 
     /**
      * {@inheritDoc}
      */
-    public function commit() : bool
+    public function commit()
     {
-        throw ClickHouseException::notSupported('Transactions are not allowed in ClickHouse');
+        throw new \LogicException('Transactions are not allowed in ClickHouse');
     }
 
     /**
      * {@inheritDoc}
      */
-    public function rollBack() : bool
+    public function rollBack()
     {
-        throw ClickHouseException::notSupported('Transactions are not allowed in ClickHouse');
+        throw new \LogicException('Transactions are not allowed in ClickHouse');
     }
 
     /**
-     * {@inheritDoc}
+     * Ping server
      */
-    public function errorCode() : ?string
-    {
-        throw ClickHouseException::notSupported('You need to implement ClickHouseConnection::errorCode()');
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    public function errorInfo() : array
-    {
-        throw ClickHouseException::notSupported('You need to implement ClickHouseConnection::errorInfo()');
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    public function ping() : bool
+    public function ping()
     {
         return $this->smi2CHClient->ping();
     }
@@ -154,20 +144,20 @@ class ClickHouseConnection implements Connection, PingableConnection, ServerInfo
     /**
      * {@inheritDoc}
      */
-    public function getServerVersion() : string
+    public function getServerVersion()
     {
         try {
             return $this->smi2CHClient->getServerVersion();
-        } catch (TransportException $e) {
+        } catch (TransportException $exception) {
             return '';
         }
     }
 
     /**
-     * {@inheritDoc}
+     * @return Client
      */
-    public function requiresQueryForServerVersion() : bool
+    public function getNativeConnection(): Client
     {
-        return true;
+        return $this->smi2CHClient;
     }
 }
