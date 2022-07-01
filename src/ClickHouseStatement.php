@@ -93,6 +93,7 @@ class ClickHouseStatement implements \IteratorAggregate, Statement
     {
         $this->values[$param] = $value;
         $this->types[$param]  = $type;
+        return true;
     }
 
     /**
@@ -102,6 +103,7 @@ class ClickHouseStatement implements \IteratorAggregate, Statement
     {
         $this->values[$param] = &$variable;
         $this->types[$param]  = $type;
+        return true;
     }
 
     /**
